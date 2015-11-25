@@ -258,12 +258,12 @@ module Mem(input clk, input reset,input memWrite,input memRead, input [31:0] pc,
         register_Mem r10(clk,reset,memWrite,decOut[10],16'b 00011_10_011_111_001,dataIn,Qout10); //add #3 ,$r7 = $r1 = 9 // This is a load use hazard, so there should be a stall.
         register_Mem r11(clk,reset,memWrite,decOut[11],16'b 01100_00001_000_101,dataIn,Qout11); //store $r0(1),$r5 = 1
    
-       /*  register_Mem r12(clk,reset,memWrite,decOut[12],16'b 00111_100_00000000,dataIn,Qout12); // cmp #0 $r4 0 = 0
+        /*register_Mem r12(clk,reset,memWrite,decOut[12],16'b 00111_100_00000000,dataIn,Qout12); // cmp #0 $r4 0 = 0
         register_Mem r13(clk,reset,memWrite,decOut[13],16'b 01100_00001_000_101,dataIn,Qout13);  //
         register_Mem r14(clk,reset,memWrite,decOut[14],16'b 00111_100_00000000,dataIn,Qout14); //
         register_Mem r15(clk,reset,memWrite,decOut[15],16'b 11010_100_11111110,dataIn,Qout15); //branch eq  -4 */
                
-                register_Mem r12(clk,reset,memWrite,decOut[12],16'b 00111_100_00000000,dataIn,Qout12); // cmp #0 $r4 0 = 0
+                 register_Mem r12(clk,reset,memWrite,decOut[12],16'b 00111_100_00000000,dataIn,Qout12); // cmp #0 $r4 0 = 0
         register_Mem r13(clk,reset,memWrite,decOut[13],16'b 11100_00000000010,dataIn,Qout13);  // jmp 2
         register_Mem r14(clk,reset,memWrite,decOut[14],16'b 00000_000_00000000,dataIn,Qout14); //
         register_Mem r15(clk,reset,memWrite,decOut[15],16'b 11010_100_11111110,dataIn,Qout15); //branch eq  -4
@@ -506,7 +506,7 @@ module ctrlCkt  ( input [4:0] opcode, input [1:0] funcField, input [4:0] opcodeN
                                  output reg [1:0] signExtNeeche, output reg memRead, output reg memWrite,
                                                                  output reg [1:0] pcmux, output reg pcwrite, output reg ifidpipeline,
                                  output reg undefinedInst);
- 
+ g
        
         // immSrc goes to sign etender. No mux required before sign extender.
         //regDestB = 0 for Rd [0-2] and 1 for second Rd [8-10]
@@ -622,10 +622,10 @@ endmodule
         end
 endmodule*/
  
-module PCMux4to1 (input [31:0] inp1,inp2, inp3, inp4, input [1:0] sel,input undefinedinstruction,input flag,output reg [31:0] muxOut);
+module PCMux4to1 (input [31:0] inp1,inp2, inp3, inp4, input [1:0] sel,input undefinedinstruction,input [31:0] PC, input flag,output reg [31:0] muxOut);
         always @(inp1, inp2, inp3, sel,undefinedinstruction,flag)
         begin
-                                if(undefinedinstruction==1 || flag==1)
+                                if(PC != 32'd0 && (undefinedinstruction==1 || flag==1))
                                                 muxOut = inp4;
                 else if (sel == 2'b01)
                         muxOut = inp2;
@@ -674,8 +674,8 @@ begin
 end
 endmodule
  
-module HazardDetectionUnit(input [4:0] neechePipelinekaNextInstruction, input [2:0] neechePipelinekaNextInstructionkaRd, input [2:0] presentRs, input writeReady,output reg haltmux,output reg pcwrite, output reg ifidpipeline);
-always@(neechePipelinekaNextInstruction,neechePipelinekaNextInstructionkaRd,presentRs,writeReady)
+module HazardDetectionUnit(input [4:0] neechePipelinekaNextInstruction, input [2:0] neechePipelinekaNextInstructionkaRd, input [2:0] presentRs, output reg haltmux,output reg pcwrite, output reg ifidpipeline);
+always@(neechePipelinekaNextInstruction,neechePipelinekaNextInstructionkaRd,presentRs)
 begin  
         if(neechePipelinekaNextInstruction == 5'b01101 && neechePipelinekaNextInstructionkaRd == presentRs)
                 begin
@@ -683,12 +683,6 @@ begin
                         ifidpipeline = 0;
                         pcwrite = 0;
                 end            
-		else if(writeReady == 0)
-				begin
-					 haltmux = 1;
-                     ifidpipeline = 0;
-                     pcwrite = 0;
-				end
         else
                 begin
                         haltmux = 0;
@@ -698,15 +692,6 @@ begin
 end
 endmodule
  
- module mux_32_2toone(input [31:0] inp1,input [31:0] inp2,input sel,output reg [31:0] memmux);
- always@(inp1,inp2,sel)
- begin
-	if(sel==1)
-		memmux = inp1;
-	else
-		memmux = inp2;
- end
- endmodule;
  
  module tempSignExt(input [15:0] inp, output reg [31:0] outp);
  always @(inp)
@@ -714,7 +699,7 @@ endmodule
         outp = {{16{inp[15]}}, inp};
 end
 endmodule
-module processor(input clk, input reset, input pcwrite,input ifidpipeline, input undefinedInst, input[31:0] instruction, input[63:0] dataLine,output[7:0] dataOut, output writeReady,output[63:0] dataTemp,output [15:0] Result, output [7:0] Result2, output reg [31:0]  memoryOutput);
+module processor(input clk, input reset, input pcwrite,input ifidpipeline,output [15:0] Result, output [7:0] Result2, output reg [31:0]  memoryOutput);
  
         wire [15:0] sextOut, insFetchOut, insFetchOutNeeche, outBusA, outBusB, p1_outBusA, p1_outBusB, p1_sextOut, AluKaOutput;
         wire [15:0] p2_aluKaOutput, p3_aluKaOutput, aluTempB, teeninputwalamux;
@@ -723,7 +708,7 @@ module processor(input clk, input reset, input pcwrite,input ifidpipeline, input
         wire [15:0] forwardedStore,p2_insFetchOutNeeche,p3_insFetchOutNeeche;
         wire immSrc, regSrcB, regDestB, aluSrcB, regWrite, p1_aluSrcB, p1_regWrite, p2_regWrite, p3_regWrite;
         wire regWriteNeeche, memRead, memWrite, p1_regWriteNeeche, p2_memRead, p2_memWrite, p2_regWriteNeeche;
-                wire Cause;
+                wire Cause, undefinedInst;
                 wire [1:0] pcmux;
         wire p3_regWriteNeeche, p1_memWrite, p1_memRead,haltmux, p1_haltmux;
         wire [1:0] aluSrcA, aluOp, toReg, p1_aluSrcA, p1_aluOp,neecheForwardOutput, p1_toReg, p2_toReg, p3_toReg, signExtNeeche,fmuxsourcea,fmuxsourceb;
@@ -740,15 +725,12 @@ module processor(input clk, input reset, input pcwrite,input ifidpipeline, input
         // Here my pcadder adds 4 to value in PCResult and store it in PCAdd , my mux selects between PCAdd, PCJump and PCBranch and store it in pcmuxkaoutput, which is stored in register
         pcAdder pcAdd(PCResult,PCAdd);
         //PCMux3to1 pcwaalamux(PCAdd,PCResultOutput + (signExtModuleOutput<<1),PCBranch,pcmux,pcmuxkaOutput);
-                PCMux4to1 pcwaalamux(PCAdd,PCResultOutput + jumpOutput,PCBranch,32'h80000180,pcmux,undefinedInst,flags[0],pcmuxkaOutput);
+                PCMux4to1 pcwaalamux(PCAdd,PCResultOutput + jumpOutput,PCBranch,32'h80000180,pcmux,undefinedInst, PCResult, flags[0],pcmuxkaOutput);
         register32bit registerPC(clk,reset,pcwrite,1'b1,pcmuxkaOutput,PCResult);
                 //register16bit registerPC(clk,reset,pcwrite,1'b1,pcmuxkaOutput,PCResult);
                
-        //Mem mem(clk,reset,1'b0,1'b1, PCResult, 16'd0, insMemOut );
-        topModule instruction_cache(clk,reset,instruction,dataLine,dataOut,writeReady,dataTemp);
-		
-		mux_32_2toone instructiontotake(dataTemp[63:32],dataTemp[31:0],PCResult[2:2],insMemOut);
-		
+        Mem mem(clk,reset,1'b0,1'b1, PCResult, 16'd0, insMemOut );
+               
         ctrlCkt ctrl(insFetchOut[15:11],insFetchOut[10:9], insFetchOutNeeche[15:11], haltmux,immSrc, regSrcB, regDestB, aluSrcA, aluSrcB, aluOp, regWrite,
                 regWriteNeeche, signExtNeeche,memRead, memWrite,pcmux,pcwrite,ifidpipeline, undefinedInst);
                
@@ -756,7 +738,7 @@ module processor(input clk, input reset, input pcwrite,input ifidpipeline, input
         IF_ID if_id(clk, reset,ifidpipeline, 1'b1,insMemOut, PCAdd, insFetchOut, insFetchOutNeeche, PCResultOutput);
              
         // This is the Hazard Detection Unit
-        HazardDetectionUnit HazardDetection(p1_insFetchOutNeeche[15:11],p1_insFetchOutNeeche[2:0],insFetchOut[5:3],writeReady,haltmux,pcwrite,ifidpipeline);
+        HazardDetectionUnit HazardDetection(p1_insFetchOutNeeche[15:11],p1_insFetchOutNeeche[2:0],insFetchOut[5:3],haltmux,pcwrite,ifidpipeline);
                                
         adderforbranch addingbranch(PCResultOutput,signExtModuleOutput<<1 , insFetchOutNeeche[14] , flags[2] , PCBranch);
                
@@ -847,23 +829,18 @@ module processorKiTestBench;
         wire [15:0] Result;
         wire [7:0] Result2;
         wire [31:0] memoryOutput;
-        reg pcwrite;
-        reg ifidpipeline;
-        reg undefinedInst;
-		reg [31:0] instruction;
-		wire writeReady;
-		reg [63:0] dataLine;
-		wire [7:0] dataOut;
-		wire[63:0] dataTemp;
-        processor uut (.clk(clk), .reset(reset), .pcwrite(pcwrite),.ifidpipeline(ifidpipeline),.undefinedInst(undefinedInst),.instruction(instruction), .dataLine(dataLine), .dataOut(dataOut), .writeReady(writeReady),.dataTemp(dataTemp),.Result(Result), . Result2(Result2), .memoryOutput(memoryOutput));
+                reg pcwrite;
+                reg ifidpipeline;
+        processor uut (.clk(clk), .reset(reset), .pcwrite(pcwrite),.ifidpipeline(ifidpipeline),.Result(Result), .Result2(Result2), .memoryOutput(memoryOutput));
  
         always
         #5 clk=~clk;
        
         initial
         begin
-                clk=0; reset=1; pcwrite=1; ifidpipeline=1; undefinedInst = 0;
-                #10  reset=0; instruction = 32'h00000080; dataLine = 64'h61041e96686d1c44;
+                clk=0; reset=1; pcwrite=1; ifidpipeline=1;
+                #10  reset=0;  
+               
                 #140 $finish;
         end
 endmodule
